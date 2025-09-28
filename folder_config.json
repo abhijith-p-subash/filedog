@@ -1,0 +1,13 @@
+{
+  "file_type":{
+    
+  },
+  "image": "Images",
+  "application/pdf": "PDFs",
+  "audio": "Audios",
+  "video": "Videos",
+  "excel": "Excels",
+  "word": "WordDocs",
+  "text/csv": "CSVs",
+  "default": "Others"
+}
