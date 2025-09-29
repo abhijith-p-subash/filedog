@@ -1,13 +1,55 @@
 {
-  "file_type":{
-    
+  "file_type": {
+    "image/": "Images",
+    "video/": "Videos",
+    "audio/": "Audios",
+    "text/plain": "TextFiles",
+    "text/csv": "CSVs",
+    "text/html": "HTML",
+    "text/css": "CSS",
+    "text/javascript": "JavaScript",
+    "application/json": "JSONs",
+    "application/xml": "XMLs",
+
+    "application/pdf": "PDFs",
+
+    "application/msword": "WordDocs",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "WordDocs",
+    "application/vnd.ms-excel": "Excels",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "Excels",
+    "application/vnd.ms-excel.sheet.macroenabled.12": "Excels",
+    "application/vnd.ms-powerpoint": "PowerPoints",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": "PowerPoints",
+
+    "application/vnd.oasis.opendocument.text": "OpenDocs",
+    "application/vnd.oasis.opendocument.spreadsheet": "OpenSheets",
+    "application/vnd.oasis.opendocument.presentation": "OpenSlides",
+
+    "application/zip": "Archives",
+    "application/x-rar-compressed": "Archives",
+    "application/x-7z-compressed": "Archives",
+    "application/x-tar": "Archives",
+    "application/gzip": "Archives",
+    "application/x-bzip2": "Archives",
+
+    "application/x-python": "Python",
+    "application/javascript": "JavaScript",
+    "application/java-archive": "Java",
+    "application/x-sh": "ShellScripts",
+    "application/x-csh": "CShellScripts",
+    "application/x-php": "PHP",
+    "application/x-ruby": "Ruby",
+    "application/x-perl": "Perl",
+    "application/x-go": "Go",
+    "application/x-rust": "Rust",
+
+    "application/x-executable": "Executables",
+    "application/x-msdownload": "Executables",
+    "application/octet-stream": "Binaries",
+    "application/vnd.android.package-archive": "AndroidAPKs",
+    "application/x-dosexec": "WindowsEXEs",
+
+    "font/": "Fonts"
   },
-  "image": "Images",
-  "application/pdf": "PDFs",
-  "audio": "Audios",
-  "video": "Videos",
-  "excel": "Excels",
-  "word": "WordDocs",
-  "text/csv": "CSVs",
   "default": "Others"
 }

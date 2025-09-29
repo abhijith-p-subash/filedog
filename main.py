@@ -9,116 +9,96 @@ with open('folder_config.json', "r") as f:
     folder_config = json.load(f)
 
 
-def get_folder_name(file_type, config):
-    if file_type in config["file_type"][file_type]:
-        return config["file_type"][file_type]
-    
-    for key, folder in config["file_type"].items():
-        if file_type.startswith(key):
-            return folder
-        
-    return config["default"]
-
 def check_create_dir(path, folder_name):
     folder_path = path / folder_name
     if not folder_path.exists():
         folder_path.mkdir()
-        print(f"Folder '{folder_name}' created at {folder_path}")
+        print(f"📂 Created folder: {folder_path}")
     else:
-        print(f"Folder '{folder_name}' already exists at {folder_path}")
+        print(f"📂 Folder exists: {folder_path}")
 
 def move_data(path, folder_name, file):
     try:
-        source = path/file
+        source = path / file
         target = path / folder_name / file
-        print("Start Moving file: {file}")
-        shutil.move(source, target)
-        print("Done ✅")
+        print(f"➡️ Moving file: {file}")
+        shutil.move(str(source), str(target))
+        print("✅ Done")
+        return True
     except Exception as e:
-        print(f"Failed Error: {e}")
+        print(f"❌ Move failed: {e}")
+        return False
 
-
-def check_and_move(file, file_type, file_path, path):
-    try:
-        folder_name = None
-        print(f"File type:{file_type}")
-        print(f"File path:{file_path}")
-        print(f"Path:{path}")
-
-        if file_type.startswith('image'):
-            print("Image")
-            folder_name = folder_config.get('image')
-            print(f"FOLDER NAME => {folder_name}")
-            check_create_dir(path, folder_name)
-            move_data(path, folder_name, file)
-        elif file_type == 'application/pdf':
-            print("PDF")
-            folder_name = folder_config.get('application/pdf')
-            print(f"FOLDER NAME => {folder_name}")
-            check_create_dir(path, folder_name)
-            move_data(path, folder_name, file)
-        elif file_type.startswith('audio'):
-            print("Audio")
-            folder_name = folder_config.get('audio')
-            print(f"FOLDER NAME => {folder_name}")
-            check_create_dir(path, folder_name)
-            move_data(path, folder_name, file)
-        elif file_type.startswith('video'):
-            print("Video")
-            folder_name = folder_config.get('video')
-            print(f"FOLDER NAME => {folder_name}")
-            check_create_dir(path, folder_name)
-            move_data(path, folder_name, file)
-        elif 'excel' in file_type:
-            print("Excel")
-            folder_name = folder_config.get('excel')
-            print(f"FOLDER NAME => {folder_name}")
-            check_create_dir(path, folder_name)
-            move_data(path, folder_name, file)
-        elif 'word' in file_type:
-            print("Word Document")
-            folder_name = folder_config.get('word')
-            print(f"FOLDER NAME => {folder_name}")
-            check_create_dir(path, folder_name)
-            move_data(path, folder_name, file)
-        elif file_type == 'text/csv':
-            print("CSV")
-            folder_name = folder_config.get('text/csv')
-            print(f"FOLDER NAME => {folder_name}")
-            check_create_dir(path, folder_name)
-            move_data(path, folder_name, file)
-        else:
-            print("Unknown file type")
-            folder_name = folder_config.get('default')
-            print(f"FOLDER NAME => {folder_name}")
-            check_create_dir(path, folder_name)
-            move_data(path, folder_name, file)
-    except Exception as e:
-        print(e)
-        return e
+def get_folder_name(file_type, config):
+    print(f"🔍 Looking up folder for file type: {file_type}")
+    # 1. Exact match
+    if file_type in config["file_type"]:
+        folder = config["file_type"][file_type]
+        print(f"✅ Exact match found: {folder}")
+        return folder
     
+    
+    # 2. prefix match (like image/, audio/, video/)
+    for key, folder in config["file_type"].items():
+        print("In loop")
+        if file_type.startswith(key):
+            print(f"✅ Prefix match found: {key} -> {folder}")
+            return folder
+    # Fallback  
+    print(f"⚠️ No match found, using default: {config['default']}")
+    return config["default"]
+
+
+def check_and_move(file, file_type, path):
+    try:
+        print(f"🔎 File type: {file_type}")
+        folder_name = get_folder_name(file_type, folder_config)
+        print(f"📂 Target folder: {folder_name}")
+
+        check_create_dir(path, folder_name)
+        res = move_data(path, folder_name, file)
+        if res:
+            print(f"✅ Successfully processed: {file}")
+        else:
+            print(f"❌ Failed to move: {file}")
+
+    except Exception as e:
+        print(f"⚠️ Error processing {file}: {e}")
+        return False
+    return True
 
 download_path = Path.home() / "Downloads"
+print(f"🖥️ Operating System: {platform.system()}")
+print(f"📂 Scanning directory: {download_path}")
 
-print(platform.system())
-print(download_path)
+try:
+    files = os.listdir(download_path)
+    print(f"📋 Found {len(files)} items")
+    processed_count = 0
+    success_count = 0
 
+    for index, file in enumerate(files):
+        file_path = download_path / file
+        print(f"\n{'='*50}")
+        print(f"Processing item {index + 1}/{len(files)}: {file}")
+        # print(f"FILE PATH:{file_path}")
+        if file_path.is_file():
+            try:
+                file_type = magic.from_file(str(file_path), mime=True)
+                print(f"🏷️ Detected file type: {file_type}")
+                if check_and_move(file, file_type, download_path):
+                    success_count += 1
+                processed_count += 1
+            except Exception as e:
+                print(f"❌ Could not determine file type for {file}: {e}")
 
-files = os.listdir(download_path)
-print(files)
-
-for index, file in enumerate(files):
-    file_path = download_path / file
-    print(f"FILE PATH:{file_path}")
-    if file_path.is_file():
-        print(f"{index + 1}. {file}")
-        try:
-            file_type = magic.from_file(str(file_path), mime=True)
-            print(f"File type is {file_type}\n")
-            check_and_move(file, file_type, file_path, download_path)
-        except Exception as e:
-            print(f"Could not determine file type: {e}\n")
-
+        print(f"\n{'='*50}")
+        print("📊 Summary:")
+        print(f"   • Files processed: {processed_count}")
+        print(f"   • Successfully moved: {success_count}")
+        print(f"   • Failed: {processed_count - success_count}")
+except Exception as e:
+    print(f"❌ Error accessing directory: {e}")
 
 
     
