@@ -84,7 +84,7 @@ try:
         # print(f"FILE PATH:{file_path}")
         if file_path.is_file():
             try:
-                file_type = magic.from_file(str(file_path), mime=True)
+                file_type = magic.from_file(str(file_path), mime=True).lower()
                 print(f"🏷️ Detected file type: {file_type}")
                 if check_and_move(file, file_type, download_path):
                     success_count += 1
