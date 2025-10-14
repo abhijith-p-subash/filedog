@@ -1,0 +1,11 @@
+dearpygui==2.1.0
+pillow==10.4.0
+pyasn1==0.6.1
+PySide6==6.10.0
+PySide6_Addons==6.10.0
+PySide6_Essentials==6.10.0
+python-magic==0.4.27
+rsa==4.9.1
+shiboken6==6.10.0
+ttkbootstrap==1.14.2
+watchdog==6.0.0
