@@ -55,7 +55,7 @@ class FileOrganizer:
     def check_create_dir(self, path, folder_name):
         folder_path = path / folder_name
         if not folder_path.exists():
-            folder_path.mkdir()
+            folder_path.mkdir(parents=True, exist_ok=True)
             self.log(f"📂 Created folder: {folder_path}")
         else:
             self.log(f"📂 Folder exists: {folder_path}")
@@ -108,6 +108,3 @@ class FileOrganizer:
             self.log(f"⚠️ Error processing {file}: {e}")
             return False
         return True
-    
-
-
