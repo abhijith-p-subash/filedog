@@ -7,12 +7,115 @@ from PySide6.QtCore import QTimer, Signal, QObject
 from PySide6.QtGui import QAction, QIcon, QPixmap, QPainter, QBrush, QColor
 from .main_window import MainWindow
 from core.file_watcher import FileWatcherService
+import platform
+
+def load_application_icon():
+    """Load the application icon with platform-specific priorities"""
+    
+    # Platform-specific icon preference
+    if platform.system() == "Darwin":  # macOS
+        # Prioritize .icns for macOS
+        mac_icon_paths = [
+            Path("assets/filedog.icns"),
+            Path("../assets/filedog.icns"),
+            Path("filedog.icns"),
+        ]
+        for icon_path in mac_icon_paths:
+            if icon_path.exists():
+                try:
+                    icon = QIcon(str(icon_path))
+                    if not icon.isNull():
+                        sizes = icon.availableSizes()
+                        print(f"✓ Loaded macOS icon from {icon_path}")
+                        print(f"  Available sizes: {sizes}")
+                        return icon
+                except Exception as e:
+                    print(f"✗ Failed to load icon from {icon_path}: {e}")
+    
+    # Try SVG (scales perfectly on all platforms)
+    svg_paths = [
+        Path("assets/filedog.svg"),
+        Path("../assets/filedog.svg"),
+        Path("filedog.svg")
+    ]
+    for svg_path in svg_paths:
+        if svg_path.exists():
+            try:
+                icon = QIcon(str(svg_path))
+                if not icon.isNull():
+                    print(f"✓ Loaded SVG icon from {svg_path}")
+                    return icon
+            except Exception as e:
+                print(f"✗ Failed to load SVG from {svg_path}: {e}")
+    
+    # Try other formats
+    icon_paths = [
+        Path("assets/filedog.ico"),
+        Path("assets/filedog_32x32.png"),
+        Path("assets/filedog_24x24.png"),
+        Path("filedog.ico"),
+    ]
+    
+    for icon_path in icon_paths:
+        if icon_path.exists():
+            try:
+                icon = QIcon(str(icon_path))
+                if not icon.isNull():
+                    print(f"✓ Loaded icon from {icon_path}")
+                    return icon
+            except Exception as e:
+                print(f"✗ Failed to load icon from {icon_path}: {e}")
+    
+    # Fallback: create a programmatic icon
+    print("⚠ Using fallback programmatic icon")
+    return create_fallback_icon()
+
+def create_fallback_icon():
+    """Create a programmatic fallback icon with multiple sizes"""
+    icon = QIcon()
+    for size in [16, 32, 64, 128, 256]:
+        pixmap = create_icon_pixmap(size)
+        icon.addPixmap(pixmap)
+    return icon
+
+def create_icon_pixmap(size):
+    """Create a single pixmap of the specified size"""
+    pixmap = QPixmap(size, size)
+    pixmap.fill(QColor(0, 0, 0, 0))  # Transparent background
+    
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    
+    # Scale proportionally
+    scale = size / 32.0
+    
+    # Draw dog face
+    painter.setBrush(QBrush(QColor(217, 158, 130)))
+    painter.setPen(QColor(217, 158, 130))
+    painter.drawEllipse(int(4*scale), int(8*scale), int(24*scale), int(20*scale))
+    
+    # Draw ears
+    painter.setBrush(QBrush(QColor(102, 33, 19)))
+    painter.drawEllipse(int(2*scale), int(6*scale), int(8*scale), int(8*scale))
+    painter.drawEllipse(int(22*scale), int(6*scale), int(8*scale), int(8*scale))
+    
+    # Draw folder element
+    painter.setBrush(QBrush(QColor(0, 122, 204, 180)))
+    painter.drawRect(int(6*scale), int(24*scale), int(20*scale), int(6*scale))
+    painter.drawRect(int(6*scale), int(22*scale), int(8*scale), int(2*scale))
+    
+    painter.end()
+    return pixmap
+
 
 class TrayApplication(QObject):
     """System tray application for FileDog with background monitoring"""
     
-    def __init__(self):
+    def __init__(self, app_icon):
         super().__init__()
+        
+        # Store the application icon
+        self.app_icon = app_icon
         
         # Initialize services
         self.watcher_service = FileWatcherService(logger=self.log_to_tray)
@@ -29,52 +132,6 @@ class TrayApplication(QObject):
         self.show_tray_message("FileDog Started", 
                              "FileDog is now monitoring your directories in the background.")
 
-    def create_icon(self):
-        """Load the FileDog icon"""
-        # Try to load the existing icon files
-        icon_paths = [
-            Path("assets/filedog.svg"),
-            Path("assets/filedog_24x24.png"),
-            Path("filedog.ico"),
-            Path("filedog.svg")
-        ]
-        
-        for icon_path in icon_paths:
-            if icon_path.exists():
-                try:
-                    icon = QIcon(str(icon_path))
-                    if not icon.isNull():
-                        return icon
-                except Exception as e:
-                    print(f"Failed to load icon from {icon_path}: {e}")
-        
-        # Fallback: create a simple programmatic icon if no files found
-        pixmap = QPixmap(32, 32)
-        pixmap.fill(QColor(0, 0, 0, 0))  # Transparent background
-        
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        
-        # Draw a simple folder-like icon with dog elements (based on SVG colors)
-        painter.setBrush(QBrush(QColor(217, 158, 130)))  # Light brown from SVG
-        painter.setPen(QColor(217, 158, 130))
-        
-        # Draw dog face
-        painter.drawEllipse(4, 8, 24, 20)
-        
-        # Draw ears
-        painter.setBrush(QBrush(QColor(102, 33, 19)))  # Dark brown
-        painter.drawEllipse(2, 6, 8, 8)
-        painter.drawEllipse(22, 6, 8, 8)
-        
-        # Draw folder element
-        painter.setBrush(QBrush(QColor(0, 122, 204, 180)))  # Blue with transparency
-        painter.drawRect(6, 24, 20, 6)
-        painter.drawRect(6, 22, 8, 2)
-        
-        painter.end()
-        return QIcon(pixmap)
-
     def setup_tray_icon(self):
         """Setup the system tray icon and menu"""
         if not QSystemTrayIcon.isSystemTrayAvailable():
@@ -82,9 +139,9 @@ class TrayApplication(QObject):
                                "System tray is not available on this system.")
             sys.exit(1)
         
-        # Create tray icon
+        # Create tray icon - use the SAME icon as the application
         self.tray_icon = QSystemTrayIcon()
-        self.tray_icon.setIcon(self.create_icon())
+        self.tray_icon.setIcon(self.app_icon)  # Use app icon, not create_icon()
         self.tray_icon.setToolTip("FileDog - File Organizer")
         
         # Create tray menu
@@ -217,6 +274,7 @@ class TrayApplication(QObject):
         # Quit application
         QApplication.quit()
 
+
 class FileDogTrayApp:
     """Main application class that manages the tray application"""
     
@@ -226,8 +284,8 @@ class FileDogTrayApp:
         if self.app is None:
             self.app = QApplication(sys.argv)
         
-        # Load application icon first
-        app_icon = self.load_application_icon()
+        # CRITICAL: Load and set application icon BEFORE creating tray icon
+        app_icon = load_application_icon()
         
         # Set application properties
         self.app.setApplicationName("FileDog")
@@ -235,75 +293,29 @@ class FileDogTrayApp:
         self.app.setOrganizationName("FileDog")
         self.app.setApplicationDisplayName("FileDog - File Organizer")
         
-        # Set application icon globally for all OS (taskbar, dock, etc.)
+        # Set application icon globally FIRST (before tray icon is created)
         self.app.setWindowIcon(app_icon)
         
-        # For Windows: Set the application user model ID to ensure proper taskbar grouping
-        import platform
+        # For Windows: Set the application user model ID
         if platform.system() == "Windows":
             try:
                 import ctypes
-                # Set application ID for Windows taskbar grouping
-                ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("FileDog.FileOrganizer.1.0")
+                ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                    "FileDog.FileOrganizer.1.0"
+                )
             except:
-                pass  # Ignore if ctypes not available or fails
+                pass
         
         # Prevent app from quitting when last window is closed
         self.app.setQuitOnLastWindowClosed(False)
         
-        # Create tray application
-        self.tray_app = TrayApplication()
-
-    def load_application_icon(self):
-        """Load the application icon for taskbar display"""
-        # Try to load the existing icon files
-        icon_paths = [
-            Path("assets/filedog.ico"),
-            Path("assets/filedog.svg"),
-            Path("assets/filedog_32x32.png"),
-            Path("filedog.ico"),
-            Path("filedog.svg")
-        ]
-        
-        for icon_path in icon_paths:
-            if icon_path.exists():
-                try:
-                    icon = QIcon(str(icon_path))
-                    if not icon.isNull():
-                        return icon
-                except Exception as e:
-                    print(f"Failed to load app icon from {icon_path}: {e}")
-        
-        # Fallback: create a simple programmatic icon
-        pixmap = QPixmap(32, 32)
-        pixmap.fill(QColor(0, 0, 0, 0))  # Transparent background
-        
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        
-        # Draw a simple folder-like icon with dog elements (based on SVG colors)
-        painter.setBrush(QBrush(QColor(217, 158, 130)))  # Light brown from SVG
-        painter.setPen(QColor(217, 158, 130))
-        
-        # Draw dog face
-        painter.drawEllipse(4, 8, 24, 20)
-        
-        # Draw ears
-        painter.setBrush(QBrush(QColor(102, 33, 19)))  # Dark brown
-        painter.drawEllipse(2, 6, 8, 8)
-        painter.drawEllipse(22, 6, 8, 8)
-        
-        # Draw folder element
-        painter.setBrush(QBrush(QColor(0, 122, 204, 180)))  # Blue with transparency
-        painter.drawRect(6, 24, 20, 6)
-        painter.drawRect(6, 22, 8, 2)
-        
-        painter.end()
-        return QIcon(pixmap)
+        # NOW create tray application (passing the icon)
+        self.tray_app = TrayApplication(app_icon)
 
     def run(self):
         """Run the application"""
         return self.app.exec()
+
 
 def main():
     """Entry point for tray application"""
