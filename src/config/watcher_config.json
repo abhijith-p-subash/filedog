@@ -1,6 +1,8 @@
 {
-  "watched_directories": [],
-  "watcher_enabled": false,
+  "watched_directories": [
+    "/Users/abhijithpsubash/Documents"
+  ],
+  "watcher_enabled": true,
   "auto_organize": true,
   "check_interval": 1.0
 }

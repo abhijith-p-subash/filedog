@@ -63,22 +63,14 @@ def main():
             show_help()
             sys.exit(1)
     else:
-        # Default to tray application for seamless background monitoring
+        # Default to GUI application - user opens UI first
         try:
-            from src.ui.tray_application import main as tray_main
-            sys.exit(tray_main())
+            from src.main import main as gui_main
+            gui_main()
         except Exception as e:
-            # Fallback to GUI if tray is not available
-            try:
-                from src.main import main as gui_main
-                gui_main()
-            except Exception as gui_error:
-                print(f"❌ Error launching applications:")
-                print(f"   Tray: {e}")
-                print(f"   GUI: {gui_error}")
-                print("\n📋 Available commands:")
-                show_help()
-                sys.exit(1)
+            print(f"❌ Error launching GUI: {e}")
+            print("   Try using CLI mode instead: python filedog.py cli --help")
+            sys.exit(1)
 
 def show_help():
     """Show help information"""
@@ -89,8 +81,8 @@ Usage:
     python filedog.py [command] [options]
 
 Commands:
-    (default)             Launch system tray application (background monitoring)
-    gui, app, ui          Launch the GUI application window
+    (default)             Launch the GUI application window
+    gui, app, ui          Launch the GUI application window explicitly
     tray, background      Launch system tray application explicitly
     cli, organize         Use command-line interface for organizing files
     service               Run console background service  

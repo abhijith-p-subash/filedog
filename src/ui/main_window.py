@@ -17,7 +17,9 @@ from PySide6.QtWidgets import (
     QStatusBar,
     QFrame,
     QSizePolicy,
-    QSpacerItem
+    QSpacerItem,
+    QSystemTrayIcon,
+    QMenu
 )
 from PySide6.QtCore import Qt, QThread, Signal, QTimer
 from PySide6.QtGui import QAction, QFont, QIcon, QPixmap, QPainter, QBrush, QColor
@@ -57,6 +59,10 @@ class MainWindow(QMainWindow):
         self.watcher_service = FileWatcherService()
         self.folder_path = Path.home() / 'Downloads'
         self.thread = None
+        
+        # Tray icon management
+        self.tray_icon = None
+        self.is_tray_active = False
         
         # Setup UI components
         self.setup_menu_bar()
@@ -273,10 +279,23 @@ class MainWindow(QMainWindow):
         control_group = QGroupBox("Watcher Control")
         control_layout = QVBoxLayout(control_group)
         
-        # Enable/disable watcher
-        self.watcher_enabled_cb = QCheckBox("Enable automatic file watching")
-        self.watcher_enabled_cb.toggled.connect(self.toggle_watcher)
-        control_layout.addWidget(self.watcher_enabled_cb)
+        # Toggle button container
+        toggle_container = QHBoxLayout()
+        toggle_label = QLabel("Enable automatic file watching")
+        toggle_label.setStyleSheet("QLabel { color: #ffffff; font-weight: 500; }")
+        
+        # Create toggle button
+        self.watcher_toggle_btn = QPushButton()
+        self.watcher_toggle_btn.setCheckable(True)
+        self.watcher_toggle_btn.setChecked(False)
+        self.watcher_toggle_btn.setFixedSize(60, 30)
+        self.watcher_toggle_btn.clicked.connect(self.toggle_watcher)
+        self.update_toggle_button_style()
+        
+        toggle_container.addWidget(toggle_label)
+        toggle_container.addStretch()
+        toggle_container.addWidget(self.watcher_toggle_btn)
+        control_layout.addLayout(toggle_container)
         
         # Status display
         self.watcher_status_label = QLabel("Status: Checking...")
@@ -385,13 +404,23 @@ class MainWindow(QMainWindow):
                 background-color: #1e1e1e;
             }
             
+            QTabWidget::tab-bar {
+                alignment: left;
+            }
+            
+            QTabBar {
+                alignment: left;
+            }
+            
             QTabBar::tab {
                 background-color: #2d2d2d;
                 color: #b3b3b3;
                 border: none;
                 min-width: 100px;
+                max-width: 200px;
                 padding: 10px 16px;
                 margin-right: 1px;
+                text-align: left;
             }
             
             QTabBar::tab:selected {
@@ -606,20 +635,180 @@ class MainWindow(QMainWindow):
         self.status_bar.showMessage("Organization failed", 5000)
         QMessageBox.critical(self, "Error", error_message)
 
+    def update_toggle_button_style(self):
+        """Update toggle button appearance based on its state and enabled status"""
+        if not self.watcher_toggle_btn.isEnabled():
+            # Disabled state - very light gray
+            self.watcher_toggle_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #404040;
+                    border: 2px solid #353535;
+                    border-radius: 15px;
+                    color: #888888;
+                    font-weight: bold;
+                    font-size: 11px;
+                }
+                QPushButton:disabled {
+                    background-color: #404040;
+                    border: 2px solid #353535;
+                    color: #888888;
+                }
+            """)
+            self.watcher_toggle_btn.setText("OFF")
+        elif self.watcher_toggle_btn.isChecked():
+            # ON state - green
+            self.watcher_toggle_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #4CAF50;
+                    border: 2px solid #45a049;
+                    border-radius: 15px;
+                    color: white;
+                    font-weight: bold;
+                    font-size: 11px;
+                }
+                QPushButton:hover {
+                    background-color: #45a049;
+                }
+            """)
+            self.watcher_toggle_btn.setText("ON")
+        else:
+            # OFF state - gray
+            self.watcher_toggle_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #666666;
+                    border: 2px solid #555555;
+                    border-radius: 15px;
+                    color: white;
+                    font-weight: bold;
+                    font-size: 11px;
+                }
+                QPushButton:hover {
+                    background-color: #555555;
+                }
+            """)
+            self.watcher_toggle_btn.setText("OFF")
+
+    def should_activate_tray(self):
+        """Check if tray should be activated based on conditions"""
+        try:
+            status = self.watcher_service.get_status()
+            directories = self.watcher_service.get_watched_directories()
+            
+            # Activate tray only if auto-organizing is enabled AND directories are configured
+            return status["is_enabled"] and len(directories) > 0
+        except Exception:
+            return False
+
+    def setup_tray_icon(self):
+        """Setup system tray icon and menu"""
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            print("System tray is not available on this system")
+            return False
+        
+        try:
+            # Create tray icon
+            self.tray_icon = QSystemTrayIcon(self)
+            self.tray_icon.setIcon(self.windowIcon())
+            self.tray_icon.setToolTip("FileDog - File Organizer (Background Mode)")
+            
+            # Create tray menu
+            tray_menu = QMenu()
+            
+            # Show main window action
+            show_action = QAction("Show FileDog", self)
+            show_action.triggered.connect(self.show_and_raise)
+            tray_menu.addAction(show_action)
+            
+            tray_menu.addSeparator()
+            
+            # Status action (read-only)
+            self.tray_status_action = QAction("Status: Active", self)
+            self.tray_status_action.setEnabled(False)
+            tray_menu.addAction(self.tray_status_action)
+            
+            tray_menu.addSeparator()
+            
+            # Quit action
+            quit_action = QAction("Quit FileDog", self)
+            quit_action.triggered.connect(self.quit_application)
+            tray_menu.addAction(quit_action)
+            
+            # Set menu and connect signals
+            self.tray_icon.setContextMenu(tray_menu)
+            self.tray_icon.activated.connect(self.tray_icon_activated)
+            
+            return True
+        except Exception as e:
+            print(f"Failed to create tray icon: {e}")
+            return False
+
+    def activate_tray(self):
+        """Activate system tray for background monitoring"""
+        if not self.is_tray_active:
+            if self.setup_tray_icon():
+                self.tray_icon.show()
+                self.is_tray_active = True
+                self.tray_icon.showMessage(
+                    "FileDog Background Mode",
+                    "FileDog is now running in the background and monitoring your directories.",
+                    QSystemTrayIcon.MessageIcon.Information,
+                    3000
+                )
+                print("✅ System tray activated - FileDog running in background")
+                return True
+            else:
+                print("❌ Failed to activate system tray")
+                return False
+        return True
+
+    def deactivate_tray(self):
+        """Deactivate system tray"""
+        if self.is_tray_active and self.tray_icon:
+            self.tray_icon.hide()
+            self.tray_icon = None
+            self.is_tray_active = False
+            print("🔸 System tray deactivated")
+
+    def tray_icon_activated(self, reason):
+        """Handle tray icon activation"""
+        if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
+            self.show_and_raise()
+
+    def show_and_raise(self):
+        """Show and raise the main window"""
+        self.show()
+        self.raise_()
+        self.activateWindow()
+
+    def quit_application(self):
+        """Quit the entire application from tray menu"""
+        self.quit_application_completely()
+
     def toggle_watcher(self, enabled):
-        """Toggle file watcher on/off"""
+        """Toggle file watcher on/off and manage tray activation"""
         try:
             self.watcher_service.set_watcher_enabled(enabled)
-            if enabled:
-                self.status_bar.showMessage("File watcher enabled", 3000)
+            self.update_toggle_button_style()
+            
+            # Check if tray should be activated/deactivated
+            if self.should_activate_tray():
+                self.activate_tray()
+                if enabled:
+                    self.status_bar.showMessage("File watcher enabled - Background monitoring active", 3000)
             else:
-                self.status_bar.showMessage("File watcher disabled", 3000)
+                self.deactivate_tray()
+                if enabled:
+                    self.status_bar.showMessage("File watcher enabled - Add directories to activate background monitoring", 3000)
+                else:
+                    self.status_bar.showMessage("File watcher disabled", 3000)
+            
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to toggle watcher: {str(e)}")
-            self.watcher_enabled_cb.setChecked(not enabled)
+            self.watcher_toggle_btn.setChecked(not enabled)
+            self.update_toggle_button_style()
 
     def add_watched_directory(self):
-        """Add a new directory to watch"""
+        """Add a new directory to watch and check tray activation"""
         directory = QFileDialog.getExistingDirectory(
             self, 
             "Select Directory to Watch", 
@@ -630,6 +819,11 @@ class MainWindow(QMainWindow):
             if success:
                 self.load_watched_directories()
                 self.status_bar.showMessage(f"Added directory: {Path(directory).name}", 3000)
+                
+                # Check if tray should be activated now that a directory is added
+                if self.should_activate_tray():
+                    self.activate_tray()
+                    self.status_bar.showMessage(f"Added directory: {Path(directory).name} - Background monitoring activated", 3000)
             else:
                 QMessageBox.warning(
                     self, 
@@ -638,7 +832,7 @@ class MainWindow(QMainWindow):
                 )
 
     def remove_watched_directory(self):
-        """Remove selected directory from watch list"""
+        """Remove selected directory from watch list and check tray deactivation"""
         current_item = self.watched_dirs_list.currentItem()
         if current_item:
             directory = current_item.text()
@@ -654,13 +848,18 @@ class MainWindow(QMainWindow):
                 if success:
                     self.load_watched_directories()
                     self.status_bar.showMessage(f"Removed directory: {Path(directory).name}", 3000)
+                    
+                    # Check if tray should be deactivated if no directories remain
+                    if not self.should_activate_tray():
+                        self.deactivate_tray()
+                        self.status_bar.showMessage(f"Removed directory: {Path(directory).name} - Background monitoring deactivated", 3000)
                 else:
                     QMessageBox.warning(self, "Error", "Could not remove directory from watch list.")
         else:
             QMessageBox.information(self, "No Selection", "Please select a directory to remove.")
 
     def load_watched_directories(self):
-        """Load and display watched directories"""
+        """Load and display watched directories and update toggle button state"""
         self.watched_dirs_list.clear()
         directories = self.watcher_service.get_watched_directories()
         for directory in directories:
@@ -669,16 +868,47 @@ class MainWindow(QMainWindow):
                 item.setForeground(Qt.GlobalColor.red)
                 item.setToolTip("Directory no longer exists")
             self.watched_dirs_list.addItem(item)
+        
+        # Enable/disable toggle button based on directory availability
+        self.update_toggle_button_availability()
+    
+    def update_toggle_button_availability(self):
+        """Enable or disable the toggle button based on directory availability"""
+        directories = self.watcher_service.get_watched_directories()
+        has_directories = len(directories) > 0
+        
+        # Block signals to prevent triggering toggle_watcher
+        self.watcher_toggle_btn.blockSignals(True)
+        
+        if has_directories:
+            # Enable toggle button
+            self.watcher_toggle_btn.setEnabled(True)
+            self.watcher_toggle_btn.setToolTip("Toggle automatic file watching")
+        else:
+            # Disable toggle button and ensure it's OFF
+            self.watcher_toggle_btn.setEnabled(False)
+            self.watcher_toggle_btn.setChecked(False)
+            self.watcher_toggle_btn.setToolTip("Add directories first to enable automatic file watching")
+            
+            # If auto-watch was enabled but no directories, disable it
+            if self.watcher_service.get_status()["is_enabled"]:
+                self.watcher_service.set_watcher_enabled(False)
+                self.deactivate_tray()
+        
+        # Update button style and unblock signals
+        self.update_toggle_button_style()
+        self.watcher_toggle_btn.blockSignals(False)
 
     def update_watcher_status(self):
         """Update watcher status display"""
         try:
             status = self.watcher_service.get_status()
             
-            # Update checkbox without triggering signal
-            self.watcher_enabled_cb.blockSignals(True)
-            self.watcher_enabled_cb.setChecked(status["is_enabled"])
-            self.watcher_enabled_cb.blockSignals(False)
+            # Update toggle button without triggering signal
+            self.watcher_toggle_btn.blockSignals(True)
+            self.watcher_toggle_btn.setChecked(status["is_enabled"])
+            self.update_toggle_button_style()
+            self.watcher_toggle_btn.blockSignals(False)
             
             # Update status text
             if status["is_running"]:
@@ -746,12 +976,37 @@ class MainWindow(QMainWindow):
         QMessageBox.information(self, "Help", help_text)
 
     def closeEvent(self, event):
-        """Handle application close event"""
+        """Handle application close event - hide to tray if auto-watch is active"""
+        # If tray is active (auto-watch enabled with directories), hide to tray instead of closing
+        if self.is_tray_active:
+            self.hide()
+            self.tray_icon.showMessage(
+                "FileDog Hidden",
+                "FileDog continues running in the background. Right-click the tray icon to access options.",
+                QSystemTrayIcon.MessageIcon.Information,
+                3000
+            )
+            event.ignore()  # Don't actually close the application
+            return
+        
+        # Otherwise, normal shutdown process
+        self.quit_application_completely()
+        event.accept()
+    
+    def quit_application_completely(self):
+        """Completely quit the application and all background processes"""
+        # Stop file watcher
         if self.watcher_service and self.watcher_service.is_running:
             self.watcher_service.stop_watching()
         
+        # Stop organizer thread if running
         if self.thread and self.thread.isRunning():
             self.thread.quit()
             self.thread.wait()
         
-        event.accept()
+        # Hide and cleanup tray icon
+        self.deactivate_tray()
+        
+        # Quit the application
+        from PySide6.QtWidgets import QApplication
+        QApplication.quit()
