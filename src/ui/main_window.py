@@ -80,6 +80,11 @@ class MainWindow(QMainWindow):
         
         # Apply modern styling
         self.apply_styles()
+        
+        # Start file watcher if enabled
+        if self.watcher_service.is_watcher_enabled():
+            self.watcher_service.start_watching()
+            self.activate_tray();
 
     def load_icon(self):
         """Load the FileDog icon for the main window"""

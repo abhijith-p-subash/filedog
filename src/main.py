@@ -97,7 +97,8 @@ def main():
     # Use SVG for perfect scaling on all displays
     svg_path = Path("assets/filedog.svg")
     if svg_path.exists():
-        app_icon = QIcon(str(svg_path))
+        # app_icon = QIcon(str(svg_path))
+        app_icon = load_application_icon()
         print(f"✓ Using SVG icon: {svg_path}")
     else:
         app_icon = load_application_icon()
