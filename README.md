@@ -1,4 +1,4 @@
-# FileDog 🐕 - Cross-Platform File Organizer
+# FileDog - Cross-Platform File Organizer
 
 FileDog is a powerful, cross-platform file organization tool that automatically sorts your files by type. It features both manual organization and automatic file watching capabilities, making it perfect for keeping your Downloads folder, Desktop, and other directories clean and organized.
 
@@ -8,71 +8,17 @@ FileDog is a powerful, cross-platform file organization tool that automatically 
 - **Automatic File Watching**: Monitor directories and automatically organize new files as they arrive
 - **Background Service**: Run file watching in the background even when the main app is closed
 - **Cross-Platform**: Works on Windows, macOS, and Linux
-- **GUI & CLI Interface**: Use the graphical interface or command-line tools
-- **Customizable**: Configure file type mappings and organization rules
-- **MIME Type Detection**: Accurate file type detection using python-magic
-- **Safe Operations**: Handles file conflicts and provides dry-run mode
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Installation
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/abhijith-p-subash/filedog.git
-   cd filedog
-   ```
+exe
+.dmg
+package for linux
 
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
 
-3. **Windows users also need**:
-   ```bash
-   pip install python-magic-bin
-   ```
 
-### Launch FileDog
-
-**System Tray (Recommended - Background Monitoring)**:
-```bash
-python filedog.py
-# Runs in background with system tray icon
-```
-
-**GUI Application Window**:
-```bash
-python filedog.py gui
-```
-
-**Command Line Interface**:
-```bash
-python filedog.py cli /path/to/organize
-```
-
-**Background Service**:
-```bash
-python filedog.py service status
-python filedog.py service start
-```
-
-### Setup Automatic Startup
-
-**Install to startup (runs automatically when system starts)**:
-```bash
-python setup_startup.py install
-```
-
-**Remove from startup**:
-```bash
-python setup_startup.py remove
-```
-
-**Check startup status**:
-```bash
-python setup_startup.py status
-```
 
 ## 📖 Usage Modes
 
@@ -92,37 +38,7 @@ The GUI provides an intuitive interface with two main tabs:
 - Files added to watched directories are automatically organized
 - Works in the background even when the app is minimized
 
-### 2. Command Line Interface
 
-Organize files directly from the command line:
-
-```bash
-# Organize a directory
-python filedog.py cli /path/to/directory
-
-# Preview what would be organized (dry run)
-python filedog.py cli /path/to/directory --dry-run
-
-# Verbose output showing each file
-python filedog.py cli /path/to/directory --verbose
-
-# Use custom configuration
-python filedog.py cli /path/to/directory --config custom_config.json
-```
-
-### 3. Background Service
-
-Run file watching as a background service:
-
-```bash
-# Check service status
-python filedog.py service status
-
-# Start background monitoring
-python filedog.py service start
-```
-
-**Note**: Configure watched directories and enable the watcher using the GUI first, then the service will monitor those directories automatically.
 
 ## 🛠️ File Organization
 
@@ -153,41 +69,6 @@ You can customize file type mappings by editing `src/config/folder_config.json`:
 }
 ```
 
-## 🔧 Advanced Usage
-
-### Cross-Platform Launchers
-
-**Windows**:
-```cmd
-filedog.bat
-filedog.bat cli C:\Users\%USERNAME%\Downloads
-filedog.bat service start
-```
-
-**Linux/macOS**:
-```bash
-chmod +x filedog.sh
-./filedog.sh
-./filedog.sh cli ~/Downloads
-./filedog.sh service start
-```
-
-### Running in Background
-
-1. **Setup**: Use the GUI to add directories and enable the watcher
-2. **Background Service**: Run `python filedog.py service start`
-3. **Verification**: Check status with `python filedog.py service status`
-
-The background service will continue monitoring even after you close the GUI application.
-
-### Testing File Watcher
-
-Test the file watcher functionality:
-```bash
-python filedog.py test
-```
-
-This creates a test directory and demonstrates the automatic file organization feature.
 
 ## 📁 Project Structure
 
@@ -211,21 +92,6 @@ filedog/
 │       ├── folder_config.json    # File type mappings
 │       └── watcher_config.json   # Watcher configuration
 ```
-
-## 🔍 How It Works
-
-1. **File Detection**: Uses `python-magic` for accurate MIME type detection
-2. **Organization**: Creates folders based on file types and moves files accordingly
-3. **Conflict Resolution**: Handles duplicate filenames by appending numbers
-4. **Watching**: Uses `watchdog` library to monitor filesystem events
-5. **Safety**: Includes delay mechanism to ensure files are fully downloaded before organizing
-
-## 🛡️ Safety Features
-
-- **Dry Run Mode**: Preview changes before applying them
-- **Conflict Handling**: Automatically renames files to prevent overwrites
-- **Error Recovery**: Graceful error handling with detailed logging
-- **File Completion Check**: Waits for files to finish downloading before organizing
 
 ## 🤝 Contributing
 
